@@ -1,0 +1,17 @@
+streamlit==1.18.0
+transformers==4.33.3
+torch==2.0.1
+sentencepiece==0.2.0
+deepface==0.0.93
+librosa==0.11.0
+numpy==1.24.4
+pandas==2.2.3
+scikit-learn==1.6.1
+matplotlib==3.9.4
+opencv-python==4.11.0.86
+soundfile==0.13.1
+requests==2.32.3
+deep-translator==1.11.4
+mistralai==1.6.0
+tqdm==4.67.1
+whisper @ git+https://github.com/openai/whisper.git@v20240930
