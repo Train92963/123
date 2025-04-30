@@ -14,4 +14,4 @@ requests==2.32.3
 deep-translator==1.11.4
 mistralai==1.6.0
 tqdm==4.67.1
-whisper @ git+https://github.com/openai/whisper.git@v20240930
+openai-whisper==20240930
