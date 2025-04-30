@@ -15,7 +15,7 @@ import mistralai
 # Whisper 模型載入
 @st.cache_resource
 def load_whisper_model():
-    return whisper.load_model("tiny")
+    return whisper.load_model("small")
 
 # 翻譯模型載入（Helsinki-NLP 中文翻英文）
 @st.cache_resource
