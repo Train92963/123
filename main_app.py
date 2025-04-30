@@ -11,12 +11,13 @@ import soundfile as sf
 from functools import lru_cache
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, TextClassificationPipeline, MarianMTModel, MarianTokenizer
 import mistralai
+import gc
 
 # Whisper 模型載入
 @st.cache_resource
 def load_whisper_model():
     return whisper.load_model("small")
-    
+
 model = load_whisper_model()
 
 # 翻譯模型載入（Helsinki-NLP 中文翻英文）
@@ -34,7 +35,7 @@ def translate_zh_to_en(text):
     return tokenizer.decode(translated[0], skip_special_tokens=True)
 
 # 語音轉文字並偵測語言
-def transcribe_audio(wav_bytes):
+def transcribe_audio(wav_bytes, model):
     with NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
         tmp.write(wav_bytes.read())
         tmp_path = tmp.name
@@ -44,14 +45,16 @@ def transcribe_audio(wav_bytes):
         sf.write(tmp_path, audio, rate)
     except Exception as e:
         st.error(f"音頻處理錯誤: {e}")
+        os.remove(tmp_path)
         return "", ""
 
-    model = load_whisper_model()
     try:
         result = model.transcribe(tmp_path)
+        os.remove(tmp_path)
         return result["text"], result["language"]
     except Exception as e:
         st.error(f"語音辨識錯誤: {e}")
+        os.remove(tmp_path)
         return "", ""
 
 # 文本情緒分析（以英文為主）
@@ -63,14 +66,10 @@ def load_text_pipeline():
     return TextClassificationPipeline(model=model, tokenizer=tokenizer, return_all_scores=False)
 
 def analyze_text_emotion(text, lang):
-    original_text = text
-    translated_text = text  # 預設就是英文
-    if lang == "zh":
-        translated_text = translate_zh_to_en(text)
+    translated_text = text if lang != "zh" else translate_zh_to_en(text)
     classifier = load_text_pipeline()
     result = classifier(translated_text)
     return sorted(result, key=lambda x: x['score'], reverse=True), translated_text
-
 
 # 影像情緒分析
 def analyze_image_emotion(image_file):
@@ -79,9 +78,11 @@ def analyze_image_emotion(image_file):
         tmp_path = tmp.name
     try:
         result = DeepFace.analyze(img_path=tmp_path, actions=['emotion'], enforce_detection=False)
+        os.remove(tmp_path)
         return result[0]['dominant_emotion']
     except Exception as e:
         st.error(f"影像情緒分析錯誤: {e}")
+        os.remove(tmp_path)
         return "neutral"
 
 # 對應 DeepFace 到 Text Emotion 的類別
@@ -134,13 +135,12 @@ def generate_response(text, emotion, lang):
 st.title("🎧 AI 情緒小助手")
 st.write("上傳語音與照片，AI 幫你分析心情，並試著讓你開心起來！")
 
-# 上傳檔案
-audio_file = st.file_uploader("請上傳語音檔 (.wav)", type=['wav','mp3'])
+audio_file = st.file_uploader("請上傳語音檔 (.wav)", type=['wav', 'mp3'])
 image_file = st.file_uploader("請上傳圖片檔", type=['jpg', 'jpeg', 'png'])
 
 if audio_file:
     with st.spinner("語音辨識中..."):
-        text, lang = transcribe_audio(audio_file)
+        text, lang = transcribe_audio(audio_file, model)
     if not text:
         st.stop()
 
@@ -172,7 +172,6 @@ if audio_file:
     st.subheader("💬 AI 對你的回應：")
     st.write(response)
 
-    # 🎁 情緒急救包
     if final_emotion in ["sadness", "fear", "anger"]:
         st.markdown("---")
         st.subheader("🎁 看起來你有點不開心，要不要來點療癒的？")
@@ -187,3 +186,8 @@ if audio_file:
             if st.button("🧠 再聊一下"):
                 st.write(generate_response(text, final_emotion, lang))
 
+    # ✅ 釋放記憶體
+    del text, translated_text, emotion_result, text_emotion, response
+    if image_file:
+        del image_file, image_emotion, mapped_image_emotion
+    gc.collect()
