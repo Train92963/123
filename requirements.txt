@@ -79,7 +79,7 @@ numba==0.60.0
 numpy==1.24.4
 oauthlib==3.2.2
 openai-whisper==20240930
-opencv-python-headless==4.11.0.86
+opencv-python==4.11.0.86
 opt_einsum==3.4.0
 packaging==24.2
 pandas==2.2.3
